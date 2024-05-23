@@ -1,0 +1,46 @@
+code {
+  padding-top: 1rem;
+  counter-reset: line;
+  width: 100%;
+}
+
+code > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  @apply mr-4 inline-block w-4 text-right text-violet-500;
+
+  /* Other styling */
+  display: inline-block;
+  width: 1rem;
+  margin-right: 2rem;
+  text-align: right;
+  color: gray;
+}
+[data-line] {
+  @apply border-l-2 border-l-transparent px-3;
+}
+
+pre code [data-highlighted-line] {
+  border-left: 4px solid hsl(var(--primary));
+  background-color: hsl(var(--primary-foreground));
+  width: 100%;
+}
+
+pre [data-highlighted-chars] {
+  box-shadow: 0 0 0 4px hsl(var(--primary));
+}
+figure {
+  margin-bottom: 2rem;
+  position: relative;
+  padding: 0.5rem 0.5rem 0;
+  background-color: #1e1e1e;
+}
+figure [data-rehype-pretty-code-title] {
+  display: inline-block;
+  border-radius: 0.3rem 0.3rem 0 0;
+  border: 1px solid white;
+  padding: 0.55rem 1rem;
+  color: white;
+  font-size: 0.8rem;
+  font-family: Inconsolata, Monaco, Consolas, "Courier New", Courier, monospace;
+}

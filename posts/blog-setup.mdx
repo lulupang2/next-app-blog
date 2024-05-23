@@ -1,0 +1,511 @@
+---
+title: '블로그 시작하기'
+date: '2024-05-20'
+description: '블로그 시작하기'
+thumbnail: '/blog/thumbnail/bgDummy.webp'
+category: 'blog'
+---
+<Toc toc={toc} />
+
+
+### 소개
+
+
+
+`next-mdx-remote`는 MDX 파일을 원격으로 가져와서 렌더링할 수 있게 도와주는 라이브러리입니다. MDX는 Markdown과 JSX를 조합해 사용할 수 있는 형식으로, 동적인 콘텐츠를 작성할 수 있습니다.
+
+
+
+이 라이브러리를 사용하면 정적 사이트 생성(SSG) 및 서버 사이드 렌더링(SSR) 환경에서 MDX 파일을 쉽게 관리하고 표시할 수 있습니다. 또한, Markdown과 JSX를 섞어서 사용할 수 있기 때문에, 매우 유연하고 동적인 블로그 포스트를 작성할 수 있습니다.
+
+
+
+- [next-mdx-remote GitHub repository](https://github.com/hashicorp/next-mdx-remote)
+
+- [next-mdx-remote-client GitHub repository](https://github.com/ipikuka/next-mdx-remote-client)
+
+
+
+`next-mdx-remote-client`는 `next-mdx-remote`가 업데이트가 늦어진다고 만들어진 라이브러리인데
+작성일(24-05-23)기준으로 당일 업데이트가 올라와버렸다. ~~아..~~
+react 19대응부터 MDX v3 업데이트, 등등 꽤 큰 업데이트라서 그냥 바꿔쓰기로 했다.
+
+다행인점은 `next-mdx-remote-client`가 원본과 사용방법이 거의 똑같기 때문에 큰 수정은 필요없을듯 하다.
+
+### 예제 코드
+
+
+
+사용 방법은 간단합니다. 마크다운 데이터를 `<MDXRemote>` 컴포넌트의 `source` 속성으로 전달하면 됩니다.
+
+
+
+```tsx title="page.tsx"
+
+import { MDXRemote } from 'next-mdx-remote/rsc';
+
+
+
+export default function Page() {
+
+    const MDXsource = `
+
+    ## 제목1
+
+    ### 중제목1-1    
+
+    #### 소제목1-1-1
+
+    `;
+
+    return (
+
+        <MDXRemote source={MDXsource} />
+
+    );
+
+}
+
+```
+
+
+
+
+
+
+
+물론 스타일링과 여러 기능을 위해서 옵션을 추가하다보면 생각보다 간단하지 않을 수도 있습니다.
+
+
+
+## 블로그에 적용해보자
+
+
+
+### 디렉토리 구조
+
+
+
+
+┣ 📂app
+┃ ┣ 📂blog
+┃ ┃ ┣ 📂[slug]  
+┣ 📂components
+┃ ┣ 📂md
+┃ ┗ 📂ui
+┣ 📂hooks
+┣ 📂libs
+┣ 📂posts
+┣ 📂public
+┣ 📂styles
+┣ 📂types
+### 디렉토리별 설명
+
+
+
+- 📂app: Next.js 라우터와 페이지 컴포넌트들이 위치하는 디렉토리입니다.
+  - 📂blog: 블로그와 관련된 페이지 컴포넌트를 포함합니다.
+    - 📂[slug]: 슬러그를 기반으로 하는 동적 라우팅을 처리하는 디렉토리입니다.
+
+- 📂components: 재사용 가능한 UI 컴포넌트가 위치하는 디렉토리입니다.
+  - 📂md: Markdown 관련 컴포넌트를 포함합니다.
+  - 📂ui: 일반적인 UI 구성 요소를 포함합니다.
+
+- 📂hooks: 커스텀 React 훅들이 위치하는 디렉토리입니다.
+- 📂libs: 유틸리티 함수나 다양한 라이브러리가 위치하는 디렉토리입니다.
+- 📂posts: 마크다운 형식의 블로그 포스트 파일들이 위치하는 디렉토리입니다.
+- 📂public: 정적 파일들을 저장하는 디렉토리입니다.  ex) 이미지, 폰트 등
+- 📂styles: CSS 스타일 파일들이 위치하는 디렉토리입니다.
+- 📂types: TypeScript 타입 정의 파일들이 위치하는 디렉토리입니다.
+
+
+
+### Markdown 파일 관련 함수
+
+
+
+내가 필요한 기능들을 정리해보겠습니다:
+
+1. List 페이지에서 사용할 모든(일정 범위) Markdown 파일의 데이터
+
+2. 상세 페이지에서 사용할 개별 Markdown 파일 데이터
+
+
+
+```bash
+
+pnpm i gray-matter
+
+```
+
+
+
+일단 frontmatter를 추출해주는 라이브러리를 사용합니다. 직접 구현할 수 있지만 굳이 번거롭게 할 필요는 없다고 판단했습니다.
+
+
+
+```ts
+
+import { readFile, readdir } from "fs/promises";
+
+import matter from 'gray-matter';
+
+import path from 'path';
+
+
+
+const getPostData = async (filename, includeSource = false) => {
+
+    const fileData = await readFile(path.join(process.cwd(), "posts", filename), "utf-8");
+
+    const { content, data } = matter(fileData);
+
+    const slug = filename.replace(/\.mdx?$/, "");
+
+    return {
+
+        slug,
+
+        frontmatter: data,
+
+        source: includeSource ? content : undefined,
+
+    };
+
+};
+
+
+
+export const getPostList = async () => {
+
+    const postList = await readdir(path.join(process.cwd(), "posts"));
+
+    const files = postList.filter((filename) => path.extname(filename) === ".mdx");
+
+    return Promise.all(files.map((filename) => getPostData(filename)));
+
+};
+
+```
+
+
+
+> **Note**: 왜 `Promise.all`을 쓰냐?
+
+> - `Promise.all`로 비동기 처리 시 병렬 처리로 더 빠르게 작업됩니다.
+
+> - `await`의 경우 해당 작업이 완료될 때까지 대기하기 때문에 순차적으로 처리됩니다.
+
+
+
+블로그 상세 페이지에서 사용할 개별 Markdown 데이터를 불러오는 함수입니다.
+
+
+
+```ts
+
+export const getPost = async (filename) => {
+
+    const { frontmatter, slug, source } = await getPostData(filename, true);
+
+    return {
+
+        slug,
+
+        frontmatter,
+
+        source,
+
+    };
+
+};
+
+```
+
+
+
+`includeSource`의 매개변수를 true로 설정하여 Markdown의 source까지 받는 점 이외에는 list 페이지와 동일합니다.
+
+
+
+#### blog/page.tsx에서 데이터 확인
+
+
+
+```tsx title="blog/page.tsx"
+
+import { getPostList } from "@/libs/markdown";
+
+
+
+export default async function Page() {
+
+    return (
+
+        <section>
+
+            <pre>{JSON.stringify(await getPostList(), null, 2)}</pre>
+
+        </section>
+
+    );
+
+}
+
+```
+
+
+
+
+
+
+
+정상적으로 출력됩니다.
+
+
+
+#### blog/[slug]/page.tsx에서 데이터 확인
+
+
+
+```tsx title="blog/[slug]/page.tsx"
+
+import { getPost } from "@/libs/markdown";
+
+
+
+export async function generateStaticParams() {
+
+    // ...
+
+}
+
+
+
+export async function generateMetadata() {
+
+    // ...
+
+}
+
+
+
+export default async function Page({ params }) {
+
+    const postData = await getPost(`${params.slug}.mdx`);
+
+    return (
+
+        <div>
+
+            <h1>{postData.frontmatter.title}</h1>
+
+            <div>{postData.source}</div>
+
+        </div>
+
+    );
+
+}
+
+```
+
+
+
+
+
+
+
+역시 정상적으로 출력되는 것을 확인했습니다.
+
+
+
+### List 페이지
+
+
+
+```tsx title="blog/page.tsx"
+
+import { getPostList } from "@/libs/markdown";
+
+import PostList from "@/components/element/PostList";
+
+
+
+export default async function Page() {
+
+    const posts = await getPostList();
+
+    const postData = posts
+
+        .filter((date) => date)
+
+        .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
+
+    
+
+    if (!posts) return <div>Not found post!</div>;
+
+    
+
+    return (
+
+        <section>
+
+            <PostList posts={postData} />
+
+        </section>
+
+    );
+
+}
+
+```
+
+
+
+앞에서 작성한 포스트 리스트를 가져오는 함수를 사용해서 데이터를 반환받은 뒤, 날짜순으로 정렬하고 리스트 컴포넌트에 props로 전달했습니다. 키워드 및 카테고리 검색, 정렬 조건은 나중에 구현하기로 해놓고 임시로 날짜순으로만 정렬했습니다.
+
+
+
+스타일링은 props로 전달받은 값을 반복문으로 구현하면 됩니다.
+
+
+
+### 상세 페이지
+
+
+
+정적 페이지(SSG) 생성을 위해 기존에 사용하던 `getStaticProps`와 `getStaticPaths`는 App Router에서는 지원하지 않습니다. 대신 `generateStaticParams`로 동적 경로를 생성해보겠습니다.
+
+
+
+```tsx title="blog/[slug]/page.tsx"
+
+import { getPostList } from "@/libs/markdown";
+
+
+
+export async function generateStaticParams() {
+
+    const posts = await getPostList();
+
+    return posts.map((post) => ({
+
+        params: {
+
+            slug: post.slug,
+
+        },
+
+    }));
+
+}
+
+```
+
+
+
+앞서 생성한 `getPostList` 함수의 slug 값들로 HTML이 생성됩니다.
+
+
+
+```tsx title="blog/[slug]/page.tsx"
+
+import { getPost } from "@/libs/markdown";
+
+import PostContents from "@/components/element/PostContents";
+
+
+
+export default async function Page({ params }) {
+
+    const postData = await getPost(`${params.slug}.mdx`);
+
+    return (
+
+        <article>
+
+            <PostContents source={postData.source} />
+
+        </article>
+
+    );
+
+}
+
+```
+
+
+
+`getStaticProps` 함수 대신 data fetching 함수를 그대로 넣으면 됩니다. (예: `getPost()`)
+
+[nextjs app Router 공식문서 - Data Fetching](https://nextjs.org/docs/app/building-your-application/data-fetching/fetching-caching-and-revalidating)
+
+
+
+```tsx title="components/element/post-contents.tsx"
+
+import { MDXRemote } from 'next-mdx-remote/rsc';
+
+import remarkGfm from 'remark-gfm';
+
+import remarkBreaks from 'remark-breaks';
+
+import rehypeSlug from 'rehype-slug';
+
+import rehypePrettyCode from 'rehype-pretty-code';
+
+
+
+export default function PostContents({ source }) {
+
+    const mdxOptions = {
+
+        remarkPlugins: [remarkGfm, remarkBreaks],
+
+        rehypePlugins: [rehypeSlug, [rehypePrettyCode, { theme: "dark-plus" }]],
+
+    };
+
+
+
+    return (
+
+        <MDXRemote source={source} options={{ mdxOptions }} components={components} />
+
+    );
+
+}
+
+```
+
+
+
+`source`는 렌더링 페이지에서 전달 받은 Markdown의 데이터이고, `options`는 렌더링 시에 사용할 plugin 등의 설정입니다. `components`는 AST에서 HTML로 파싱된 HTML 요소들의 스타일을 정의한 것입니다.
+
+
+
+#### 플러그인
+
+
+
+##### Remark
+
+- remarkGfm: Markdown 내에 Table, `~~취소선~~` 등을 지원하는 플러그인입니다.
+
+- remarkBreaks: 기존에는 두 줄로 개행해야 줄바꿈이 되지만, 이 플러그인을 사용하면 한 줄 개행도 가능합니다.
+
+
+
+##### Rehype
+
+- rehypeSlug: 제목요소에 id값 추가하는 플러그인이다. 목차에서 해당 제목요소에 이동하는 기능을 사용할때 `href='#id`를 또는 scrollTo를 사용하든 입맛에 맞게 사용하면 되겠다.
+
+- rehypePrettyCode: 코드 구문에 스타일링 (VSCode 테마)을 적용하는 플러그인입니다. 개발 블로그에 필요한 기능들을 제공합니다.
+
+
+
+원래는 [shiki](https://shiki.style/)를 사용하여 two-slash 등의 기능을 추가하고 싶었지만, RSC 관련 헤딩 문제로 인해 나중에 적용하기로 했습니다.
+
+```
