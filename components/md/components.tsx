@@ -4,7 +4,7 @@ import Collapse from "@/components/md/collapse";
 import Code from "@/components/md/code";
 import Toc from "@/components/md/toc";
 import Callout from "@/components/md/callout";
-export const components: MDXComponents = {
+export const components = {
   h1: ({ className, ...props }) => (
     <h1
       className={cn(
