@@ -8,6 +8,9 @@ export default function Navigation() {
       <div className="container p-4 flex items-center justify-between bg-white text-black dark:bg-black dark:text-white">
         <span>My Blog</span>
         <nav className="flex text-sm font-medium space-x-6">
+          <Link href="/blog">
+            <Icons.home className="h-7 w-7" />
+          </Link>
           <ThemeToggle />
           <Link
             href={'https://github.com/lulupang'}
