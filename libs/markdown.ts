@@ -23,7 +23,7 @@ export const getPostList = async () => {
   const postList = await readdir(path.join(process.cwd(), "posts"));
   const files = postList.filter((filename) => path.extname(filename) === ".mdx")
   const result = Promise.all(files.map((filename) => getPostData(filename)));
-  return result
+  return (await result).sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime());
 };
 
 export const getPost = async (filename: string) => {
