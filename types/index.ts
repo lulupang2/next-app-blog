@@ -3,7 +3,7 @@ type Frontmatter = {
   date: Date;
   description: string;
   thumbnail: string;
-  category: string;
+  tags: string;
 };
 type PostData = {
   slug: string;
