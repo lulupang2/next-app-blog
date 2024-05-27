@@ -1,7 +1,7 @@
-import PostContents from "@/components/post-contents";
-import { getPost, getPostList } from "@/libs/markdown";
+import { getPost, getPostList } from '@/libs/markdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import SideToc from "@/components/sidebar";
+import PostContents from '@/components/BlogPost/postContents';
+import SideToc from '@/components/BlogPost/sidebar';
 
 interface Params {
   slug: string;
@@ -23,11 +23,11 @@ export async function generateMetadata({
 
   if (!data)
     return {
-      title: "My Blog Post 📝",
+      title: 'My Blog Post 📝',
     };
 
   return {
-    title: data.frontmatter.title ?? "My Blog Post 📝",
+    title: data.frontmatter.title ?? 'My Blog Post 📝',
   };
 }
 export default async function Page({ params }: { params: Params }) {
@@ -38,7 +38,7 @@ export default async function Page({ params }: { params: Params }) {
   }
 
   return (
-    <article className="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px]">
+    <article className="relative container bg-white text-black dark:bg-black dark:text-white py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px]">
       <PostContents source={postData.source} />
       <div className="hidden text-sm xl:block">
         <div className="sticky top-16 -mt-10 pt-4">

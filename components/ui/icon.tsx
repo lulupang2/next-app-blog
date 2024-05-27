@@ -22,11 +22,11 @@ import {
   Trash,
   Twitter,
   User,
+  Home,
   X,
   type Icon as LucideIcon,
   Timer,
-} from "lucide-react"
-
+} from 'lucide-react';
 
 export const Icons = {
   logo: Command,
@@ -51,6 +51,7 @@ export const Icons = {
   moon: Moon,
   laptop: Laptop,
   time: Timer,
+  home: Home,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"
@@ -70,4 +71,4 @@ export const Icons = {
   ),
   twitter: Twitter,
   check: Check,
-}
+};

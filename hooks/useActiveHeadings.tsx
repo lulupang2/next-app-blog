@@ -1,17 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 
-const useActiveHeadings = () => {
-  const [activeHeadingIds, setActiveHeadingIds] = useState<string[]>([]);
+const useActiveHeading = () => {
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+
   useEffect(() => {
     const handleIntersection = (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          setActiveHeadingIds((prevIds) => [...prevIds, entry.target.id]);
-        } else {
-          setActiveHeadingIds((prevIds) =>
-            prevIds.filter((id) => id !== entry.target.id)
-          );
+          setActiveHeadingId(entry.target.id);
         }
       });
     };
@@ -21,9 +18,7 @@ const useActiveHeadings = () => {
       threshold: 1.0,
     });
 
-    const headings = Array.from(
-      document.querySelectorAll('h1, h2, h3, h4, h5, h6')
-    );
+    const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
     headings.forEach((heading) => observer.current?.observe(heading));
 
     return () => {
@@ -31,7 +26,7 @@ const useActiveHeadings = () => {
     };
   }, []);
 
-  return activeHeadingIds;
+  return activeHeadingId;
 };
 
-export default useActiveHeadings;
+export default useActiveHeading;
