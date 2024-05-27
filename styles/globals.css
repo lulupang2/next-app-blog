@@ -56,3 +56,12 @@
     --ring: 142.4 71.8% 29.2%;
   }
 }
+img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  font-style: italic;
+  background-repeat: no-repeat;
+  background-size: cover;
+  shape-margin: 0.75rem;
+}
