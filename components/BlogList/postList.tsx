@@ -16,7 +16,7 @@ const PostList = ({ allPosts }: Post) => {
   const [hasMorePosts, setHasMorePosts] = useState(true);
   useEffect(() => {
     setHasMorePosts(allPosts.length > 4);
-  }, []);
+  }, [allPosts.length]);
   useEffect(() => {
     if (loadMore) {
       const newPosts = allPosts.slice(posts.length, posts.length + 4);
@@ -24,7 +24,7 @@ const PostList = ({ allPosts }: Post) => {
       setLoadMore(false);
       setHasMorePosts(allPosts.length > posts.length + newPosts.length);
     }
-  }, [loadMore]);
+  }, [loadMore, allPosts, posts.length]);
   return (
     <div className="flex flex-col  items-center">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
