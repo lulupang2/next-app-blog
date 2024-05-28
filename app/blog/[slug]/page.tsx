@@ -2,6 +2,7 @@ import { getPost, getPostList } from '@/libs/markdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PostContents from '@/components/BlogPost/postContents';
 import SideToc from '@/components/BlogPost/sidebar';
+import { BASE_URL } from '@/constants';
 
 interface Params {
   slug: string;
@@ -14,11 +15,7 @@ export async function generateStaticParams() {
     },
   }));
 }
-export async function generateMetadata({
-  params,
-}: {
-  params: Params;
-}): Promise<Partial<Frontmatter>> {
+export async function generateMetadata({ params }: { params: Params }) {
   const data = await getPost(`${params.slug}.mdx`);
 
   if (!data)
@@ -26,8 +23,26 @@ export async function generateMetadata({
       title: 'My Blog Post 📝',
     };
 
+  let { title, date: publishedTime, description, thumbnail } = data.frontmatter;
+  let ogImage = thumbnail
+    ? thumbnail
+    : `${BASE_URL}/og?title=${encodeURIComponent(title)}`;
+
   return {
     title: data.frontmatter.title ?? 'My Blog Post 📝',
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      publishedTime,
+      url: `${BASE_URL}/blog/${params.slug}`,
+      images: [
+        {
+          url: ogImage,
+        },
+      ],
+    },
   };
 }
 export default async function Page({ params }: { params: Params }) {
