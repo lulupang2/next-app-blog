@@ -43,6 +43,7 @@ export async function generateMetadata({ params }: { params: Params }) {
         },
       ],
     },
+    metadataBase: 'https://blog.jisung.pro',
   };
 }
 export default async function Page({ params }: { params: Params }) {
