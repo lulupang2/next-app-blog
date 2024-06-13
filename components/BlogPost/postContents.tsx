@@ -8,6 +8,7 @@ import { CompileOptions } from '@mdx-js/mdx';
 import { mdxComponents } from '../markdown';
 import Comments from '../Comments';
 import { InsertComment } from '@/db/schema';
+import { Suspense } from 'react';
 
 export default function PostContents({
   source,
@@ -35,7 +36,9 @@ export default function PostContents({
   return (
     <section>
       <MDXRemote source={source} options={options} components={mdxComponents} />
-      <Comments data={comments} createComment={createComment} slug={slug} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <Comments data={comments} createComment={createComment} postId={slug} />
+      </Suspense>
     </section>
   );
 }
