@@ -6,8 +6,20 @@ import remarkGfm from 'remark-gfm';
 import { MDXRemote, MDXRemoteProps } from 'next-mdx-remote/rsc';
 import { CompileOptions } from '@mdx-js/mdx';
 import { mdxComponents } from '../markdown';
+import Comments from '../Comments';
+import { InsertComment } from '@/db/schema';
 
-export default function PostContents({ source }: { source: string }) {
+export default function PostContents({
+  source,
+  slug,
+  comments,
+  createComment,
+}: {
+  source: string;
+  slug: string;
+  comments: any[];
+  createComment(data: InsertComment): Promise<void>;
+}) {
   const mdxOptions: Omit<
     CompileOptions,
     'outputFormat' | 'providerImportSource'
@@ -23,6 +35,7 @@ export default function PostContents({ source }: { source: string }) {
   return (
     <section>
       <MDXRemote source={source} options={options} components={mdxComponents} />
+      <Comments data={comments} createComment={createComment} slug={slug} />
     </section>
   );
 }

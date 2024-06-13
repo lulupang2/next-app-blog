@@ -3,6 +3,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import PostContents from '@/components/BlogPost/postContents';
 import SideToc from '@/components/BlogPost/sidebar';
 import { BASE_URL } from '@/constants';
+import Comments from '@/components/Comments';
+import { InsertComment, SelectComment, postComment } from '@/db/schema';
+import { db } from '@/db/drizzle';
+import { eq } from 'drizzle-orm';
 
 interface Params {
   slug: string;
@@ -46,9 +50,25 @@ export async function generateMetadata({ params }: { params: Params }) {
     metadataBase: 'https://blog.jisung.pro',
   };
 }
+
+async function getCommentsById(slug: SelectComment['postId']) {
+  const results = await db
+    .select()
+    .from(postComment)
+    .where(eq(postComment.postId, slug));
+  return results;
+}
 export default async function Page({ params }: { params: Params }) {
   const postData = await getPost(`${params.slug}.mdx`);
-
+  const commentData = await getCommentsById(params.slug);
+  async function createComment(data: InsertComment) {
+    'use server';
+    try {
+      await db.insert(postComment).values(data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
   if (!postData.source) {
     return <div>No posts found for {params.slug}</div>;
   }
@@ -72,21 +92,19 @@ export default async function Page({ params }: { params: Params }) {
             url: `${BASE_URL}/blog/${params.slug}`,
             author: {
               '@type': 'Person',
-              name: 'My Portfolio',
+              name: 'Jisung Blog',
             },
           }),
         }}
       />
-      <PostContents source={postData.source} />
-      <div className="hidden text-sm xl:block">
-        <div className="sticky top-16 -mt-10 pt-4">
-          <ScrollArea className="pb-10">
-            <div className="sticky top-16 -mt-10 h-[calc(100vh-3.5rem)] py-12">
-              <SideToc data={postData.toc} />
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
+      <PostContents
+        source={postData.source}
+        slug={params.slug}
+        comments={commentData}
+        createComment={createComment}
+      />
+
+      <SideToc data={postData.toc} />
     </article>
   );
 }
