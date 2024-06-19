@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['next-mdx-remote'],
-  experimental: {
-    splitChunks: { pages: true },
-  },
+  experimental: {},
 };
 
 export default nextConfig;

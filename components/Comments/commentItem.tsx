@@ -7,16 +7,10 @@ import CommentInput from './commentInput';
 type CommentItemProps = {
   comment: SelectComment;
   data: SelectComment[];
-  createComment: (data: InsertComment) => Promise<void>;
   postId: string;
 };
 
-const CommentItem: React.FC<CommentItemProps> = ({
-  comment,
-  data,
-  createComment,
-  postId,
-}) => {
+const CommentItem: React.FC<CommentItemProps> = ({ comment, data, postId }) => {
   const replies = data.filter((c) => c.parentId === comment.id);
   const [showReplyForm, setShowReplyForm] = useState(false);
 
@@ -27,7 +21,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   return (
     <li className={styles.commentItem}>
       <p className={styles.commentContent}>
-        <span className={styles.commentId}>{comment.id}.</span>{' '}
+        {/* <span className={styles.commentId}>{comment.id}.</span>{' '} */}
         {comment.contents}
       </p>
       <div className={styles.commentInfo}>
@@ -46,13 +40,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           Reply
         </button>
       </div>
-      {showReplyForm && (
-        <CommentInput
-          createComment={createComment}
-          postId={postId}
-          parentId={comment.id}
-        />
-      )}
+      {showReplyForm && <CommentInput postId={postId} parentId={comment.id} />}
       {replies.length > 0 && (
         <ul className={styles.replyList}>
           {replies.map((reply) => (
@@ -60,7 +48,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
               key={reply.id}
               comment={reply}
               data={data}
-              createComment={createComment}
               postId={postId}
             />
           ))}

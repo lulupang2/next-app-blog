@@ -7,6 +7,7 @@ import Comments from '@/components/Comments';
 import { InsertComment, SelectComment, postComment } from '@/db/schema';
 import { db } from '@/db/drizzle';
 import { eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 
 interface Params {
   slug: string;
@@ -51,6 +52,7 @@ async function createComment(data: InsertComment) {
   'use server';
   try {
     await db.insert(postComment).values(data);
+    revalidatePath('/blog/[slug]', 'page');
   } catch (e) {
     console.error(e);
   }

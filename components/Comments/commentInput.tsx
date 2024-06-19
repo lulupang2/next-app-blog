@@ -23,6 +23,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
       name,
       postId,
       contents: newComment,
+      created_at: new Date(),
       parentId,
     };
 

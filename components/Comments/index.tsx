@@ -13,25 +13,32 @@ type CommentsProps = {
 
 const Comments: React.FC<CommentsProps> = ({ postId, data, createComment }) => {
   const [comments, setComments] = useState<SelectComment[]>(data);
+  const handleCreateComment = async (comment: InsertComment) => {
+    const newComment = {
+      ...comment,
+    };
+    await createComment(newComment);
+    setComments((prev) => [...prev, comment as SelectComment]);
+  };
 
   return (
     <div className={styles.comments}>
       <h2 className={styles.heading}>댓글</h2>
       <ul className={styles.commentList}>
-        {data
+        {comments
           .filter((comment: SelectComment) => !comment.parentId)
           .map((comment: SelectComment) => (
             <CommentItem
+              createComment={handleCreateComment}
               key={comment.id}
               comment={comment}
               data={data}
-              createComment={createComment}
               postId={postId}
             />
           ))}
       </ul>
       <CommentInput
-        createComment={createComment}
+        createComment={handleCreateComment}
         postId={postId}
         parentId={undefined}
       />
