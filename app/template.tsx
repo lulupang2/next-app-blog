@@ -1,6 +1,8 @@
 import { ThemeProvider } from '@/components/theme-provider';
 import Navigation from '@/components/navigation';
 import { cn } from '@/libs/utils';
+import { GoogleAnalytics } from '@next/third-parties/google';
+
 const Template = ({ children }: { children: React.ReactNode }) => {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -8,6 +10,8 @@ const Template = ({ children }: { children: React.ReactNode }) => {
         <Navigation />
         {children}
       </main>
+
+      <GoogleAnalytics gaId="G-2QHSVMK95M" />
     </ThemeProvider>
   );
 };
