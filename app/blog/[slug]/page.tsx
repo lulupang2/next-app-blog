@@ -13,27 +13,24 @@ interface Params {
 }
 export async function generateStaticParams() {
   const posts = await getPostList();
-  return posts.map((post) => ({
-    params: {
-      slug: post.slug,
-    },
-  }));
+  return posts.map((post) => ({ slug: post.slug }));
 }
 export async function generateMetadata({ params }: { params: Params }) {
   const data = await getPost(`${params.slug}.mdx`);
+  if (!data) return { title: 'My Blog Post 📝' };
 
-  if (!data)
-    return {
-      title: 'My Blog Post 📝',
-    };
-
-  let { title, date: publishedTime, description, thumbnail } = data.frontmatter;
-  let ogImage = thumbnail
+  const {
+    title,
+    date: publishedTime,
+    description,
+    thumbnail,
+  } = data.frontmatter;
+  const ogImage = thumbnail
     ? thumbnail
     : `${BASE_URL}/og?title=${encodeURIComponent(title)}`;
 
   return {
-    title: data.frontmatter.title ?? 'My Blog Post 📝',
+    title,
     description,
     openGraph: {
       title,
@@ -41,34 +38,27 @@ export async function generateMetadata({ params }: { params: Params }) {
       type: 'article',
       publishedTime,
       url: `${BASE_URL}/blog/${params.slug}`,
-      images: [
-        {
-          url: ogImage,
-        },
-      ],
+      images: [{ url: ogImage }],
     },
-    metadataBase: 'https://blog.jisung.pro',
+    metadataBase: new URL('https://blog.jisung.pro'),
   };
 }
 
 async function getCommentsById(slug: SelectComment['postId']) {
-  const results = await db
-    .select()
-    .from(postComment)
-    .where(eq(postComment.postId, slug));
-  return results;
+  return db.select().from(postComment).where(eq(postComment.postId, slug));
+}
+async function createComment(data: InsertComment) {
+  'use server';
+  try {
+    await db.insert(postComment).values(data);
+  } catch (e) {
+    console.error(e);
+  }
 }
 export default async function Page({ params }: { params: Params }) {
   const postData = await getPost(`${params.slug}.mdx`);
   const commentData = await getCommentsById(params.slug);
-  async function createComment(data: InsertComment) {
-    'use server';
-    try {
-      await db.insert(postComment).values(data);
-    } catch (e) {
-      console.error(e);
-    }
-  }
+
   if (!postData.source) {
     return <div>No posts found for {params.slug}</div>;
   }
