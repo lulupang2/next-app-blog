@@ -1,0 +1,297 @@
+---
+title: '블로그 댓글기능 구현하기'
+date: '2024-06-19'
+description: '블로그 댓글기능 구현하기'
+thumbnail: '/blog/thumbnail/drizzle.svg'
+category: 'blog'
+---
+
+## 댓글기능 구현
+
+### 서론
+
+지금 보고 계신 블로그 사이트의 comment의 구조는 RDBMS는`postgreSQL`([neon](https://neon.tech/)) ORM은 `drizzle`([Drizzle ORM](https://orm.drizzle.team/))을 사용하고있다.
+
+간단하게 댓글 기능을 사용하기 위해 위젯으로 제공되는 서비스가 많긴하지만 이번에는 rdb를 사용해서 구성했다.
+대표적으로 댓글기능에는 아래 두 위젯이 많이 사용된다,
+
+- [giscus](https://giscus.app/ko)
+- [utterances](https://utteranc.es/)-
+
+ORM을 사용해서 굳이 db의 종류가 중요하지 않아서 `drizzle`에서 예제로 다루는 `postgreSQL`를 serverless로 제공하는 `neon`을 사용했다.
+
+`next.js`에서는 대부분 ORM을 사용하면 `Prisma`를 사용하고 있고
+`node.js`의 서버 `nest.js` `express` 역시 `TypeORM`과 `Sequelize`, `Prisma`를 주로 사용하기때문에
+~~`bun.js`는 그래도 고려대상에 포함되는 것 같기도 하고..~~
+
+아직 짧은 견식으로는 사용자 풀이 적은 `Drizzle`은 굳이 깊게 파야하나.. 라는 생각이 들기도 한다.
+api호출시 sql문과 비슷하게 작성하는 부분이나 typescript친화적이라는 표현을 쓰긴하는데
+굳이 장점인가 싶기도 하고 typescript부분은 최근 ORM들중에 친화적이지 않는것을 찾는게 빠르지 않을까 싶다.
+
+물론 나쁘다는게 아니라 기존 ORM에서 마이그레이션을 할만한 성능이라던가 편의성,생산성이라고 하긴 살짝 부족한감이 없지 않나라고 생각한다.
+
+~~짧게 요약하면 그냥 drizzle을 한번 써보고 싶어서 위젯을 안쓰고 db로..~~
+
+### 셋업
+
+아래는 Drizzle 공식사이트의 Next.js에서 Drizzle ORM을 적용하는 가이드이다
+[Drizzle ORM - Todo App with Neon Postgres](https://orm.drizzle.team/learn/tutorials/drizzle-nextjs-neon#initiate-nextjs-app-with-tailwind-css)
+
+1. 패키지 설치
+
+```shell
+npm i drizzle-orm @neondatabase/serverless
+npm i -D drizzle-kit
+```
+
+> [!NOTE] neon(postgress) 기준
+> 로컬에서 sqlite를 사용한다거나 aws rds를 쓴다거나 supabase 혹은 직접 다른 rdbms 서버를 사용 할 경우는 공식 사이트에서 확인!
+
+.env
+
+```env
+DATABASE_URL=postgresql://주소
+```
+
+```ts title="drizzle.config.ts"
+import { defineConfig } from 'drizzle-kit';
+export default defineConfig({
+  schema: './db/schema',
+  out: './db/migrations',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+});
+```
+
+```ts title="./db/drizzle.ts"
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+const sql = neon(process.env.DATABASE_URL!);
+export const db = drizzle(sql, { logger: true });
+```
+
+`logger` 옵션은 `jpa`같은 여타 ORM처럼 콘솔에 sql문을 출력해주는 옵션이다.
+
+```ts title="./db/schema/index.ts"
+import {
+  AnyPgColumn,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
+
+export const postComment = pgTable('post_comments', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  postId: text('post_id').notNull(),
+  contents: text('contents').notNull(),
+  created_at: timestamp('created_at').defaultNow(),
+  parentId: integer('parent_id').references((): AnyPgColumn => postComment.id),
+});
+
+export type SelectComment = typeof postComment.$inferSelect;
+export type InsertComment = typeof postComment.$inferInsert;
+```
+
+#### 테이블구조
+
+| id  | name  | post_id      | comment     | created_at          | parent_id |
+| --- | ----- | ------------ | ----------- | ------------------- | --------- |
+| 1   | user  | comment_post | 1등         | 2024-06-16 10:00:00 | NULL      |
+| 2   | user2 | comment_post | 2등         | 2024-06-16 10:05:00 | NULL      |
+| 3   | user3 | comment_post | 2등 새치기! | 2024-06-16 10:10:00 | 1         |
+| 4   | user  | blog_post    | 1등         | 2024-06-16 10:00:00 | NULL      |
+
+- id : serial값으로 `AUTO_INCREMENT` 자동증가하는 타입으로 pk값 지정
+- name: 글쓴이 (author가 맞지 않나 싶은데 db가 comment전용이라 굳이..)
+- post_id: 블로그 페이지의 slug값으로 사용했다. category로 url을 분리하지도 않았고 같은 디렉토리내에 파일명으로 페이지가 생성되기때문에 중복생각없이 사용
+- comment: 댓글 내용 컬럼이다. (이것도 contents로 할걸 그랬나 싶기도 하다)\
+- created_at: db에 등록될시에 시간(Now)로 사용
+- parent_id: comment 계층 (대댓글)을 사용하기 위해 id값 참조
+
+app/blog/[slug]/page.tsx
+
+```tsx title="app/blog/[slug]/page.tsx"
+//...
+
+//comment select get요청
+async function getCommentsById(slug: SelectComment['postId']) {
+  return db.select().from(postComment).where(eq(postComment.postId, slug));
+}
+//comment insert post요청
+async function createComment(data: InsertComment) {
+	try {
+	await db.insert(postComment).values(data);
+	revalidatePath('/blog/[slug]', 'page');
+	} catch (e) {
+    console.error(e);
+  }
+ 
+}
+//Page 렌더링 함수
+export default async function Page({ params }: { params: Params }) {
+  const commentData = await getCommentsById(params.slug);
+return(
+      <PostContents
+        source={postData.source}
+        slug={params.slug}
+        comments={commentData}
+        createComment={createComment}
+      />
+      )
+*/
+```
+
+데이터 호출은 가능한 상위(부모)에서 전달
+
+```tsx
+revalidatePath('/blog/[slug]', 'page');
+```
+
+SSG에서는 렌더링이 되고 난 뒤에 재렌더링이 되지 않기때문에 바뀐부분이 있는지 재검증하여
+캐시 데이터를 제거하기 위해 해당코드를 사용.
+try에서 정상적으로 데이터가 insert가 되었다면 당연히 바뀐부분이 발생하니까
+
+```tsx title="components/BlogPost/postContents.tsx"
+export default function PostContents({
+//...
+      <Suspense fallback={<div>Loading...</div>}>
+        <Comments data={comments} createComment={createComment} postId={slug} />
+      </Suspense>
+     
+```
+
+큰 데이터도 아니라서 굳이 loading 시간동안 fallback 렌더링을 할 필요가 있나 싶은데
+나중에 시간되면 레이아웃 맞춰서 skeleton으로 작성할 예정
+
+### 댓글 컴포넌트
+
+```tsx title="components/Comments/index.tsx"
+'use client';
+
+type CommentsProps = {
+  postId: string;
+  data: SelectComment[];
+  createComment: (data: InsertComment) => Promise<void>;
+};
+
+const Comments: React.FC<CommentsProps> = ({ postId, data, createComment }) => {
+  const [comments, setComments] = useState<SelectComment[]>(data);
+  const handleCreateComment = async (comment: InsertComment) => {
+    const newComment = {
+      ...comment,
+    };
+    await createComment(newComment);
+    setComments((prev) => [...prev, comment as SelectComment]);
+  };
+  return (
+    <div className={styles.comments}>
+            <h2 className={styles.heading}>댓글</h2>     {' '}
+      <ul className={styles.commentList}>
+               {' '}
+        {comments
+          .filter((comment: SelectComment) => !comment.parentId)
+          .map((comment: SelectComment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              data={data}
+              postId={postId}
+            />
+          ))}
+             {' '}
+      </ul>
+            <CommentInput
+        createComment={handleCreateComment}
+        postId={postId}
+        parentId={undefined}
+      />   {' '}
+    </div>
+  );
+};
+
+export default Comments;
+```
+
+Comment의 상위 Component다.
+
+#### 댓글 출력
+
+일단 받아온 댓글 배열을 useState에 넣어주자 (왜useState를 사용하는지는 댓글 입력 전송 부분에서 설명)
+
+계층 댓글 구조는 처음에는 parent_id가 null인 개체만 렌더링 한 뒤
+comment의 id와 parent_id가 같을 경우에 재귀적으로 호출하는 방식으로 처리했다.
+
+##### CommentItem component
+
+```tsx title="components/Comments/commentItem.tsx"
+'use client';
+
+const CommentItem: React.FC<CommentItemProps> = ({
+  comment,
+  data,
+  createComment,
+  postId,
+}) => {
+  const replies = data.filter((c) => c.parentId === comment.id);
+  return (
+    <li className={styles.commentItem}>
+           {' '}
+      <p className={styles.commentContent}>        {comment.contents}      </p> 
+         {' '}
+      <div className={styles.commentInfo}>
+               {' '}
+        <p className={styles.commentDetails}>
+                   {' '}
+          <span className={styles.commentAuthor}>작성자: {comment.name}</span> -{' '}
+                   {' '}
+          <span className={styles.commentDate}>
+                       {' '}
+            {new Date(comment.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+                     {' '}
+          </span>
+                 {' '}
+        </p>
+             {' '}
+      </div>
+            {replies.length > 0 && (
+        <ul className={styles.replyList}>
+                   {' '}
+          {replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              data={data}
+              createComment={createComment}
+              postId={postId}
+            />
+          ))}
+                 {' '}
+        </ul>
+      )}   {' '}
+    </li>
+  );
+};
+
+export default CommentItem;
+```
+
+설명을 이어서
+CommentItem 컴포넌트는 parent_id가 null인 친구들만 렌더링하고 있다.
+그리고 해당 포스트의 전체 comment array도 Props도 전달 받고 있기때문에
+전체 comment에서 parent_id로 현재 컴포넌트의 id를 가지고 있는 친구들을 filter한 뒤
+자기 자신을 다시 호출(렌더링) 하고 있다.
+
+#### 댓글 작성
+
+comment array를 받아서 useState에 전달 -> 단순하게 post 요청만 해버리면 작성이 성공되어도 화면에는 아무변화가 없다.
+
+[대충 댓글 작성버튼 눌려서 전송하고 새로고침 깜빡하면서 alert창으로 성공했다는 움짤 들어갈 예정]
